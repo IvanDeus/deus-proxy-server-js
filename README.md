@@ -1,5 +1,5 @@
 # deus proxy server
-
+Node.js Anonymous HTTP/HTTPS Proxy Server
 ## Requirements
 
 Node.js 22
@@ -8,4 +8,4 @@ Node.js 22
 ```
 node proxy.js
 ```
-[iban deus] 2025
+[ivan deus] 2025
