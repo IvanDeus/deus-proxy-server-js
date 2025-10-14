@@ -1,0 +1,8 @@
+# ignore config file for security
+__app.py
+__pycache__/
+node_modules/
+package-lock.json
+cert.cer
+key.key
+.env
