@@ -18,7 +18,7 @@ A Node.js-based anonymous HTTP/HTTPS proxy server that provides secure and flexi
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/IvanDeus/deus-proxy-server-js.git
    cd deus-proxy-server-js
    ```
 
