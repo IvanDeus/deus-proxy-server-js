@@ -55,7 +55,7 @@ For production deployment, use PM2 to manage the proxy server:
 pm2 start proxy.js --name "deus-proxy"
 
 # Start with specific environment file
-pm2 start proxy.js --name "deus-proxy" --env production
+pm2 start proxy.js --name "deus-proxy"
 
 # View process status
 pm2 status
