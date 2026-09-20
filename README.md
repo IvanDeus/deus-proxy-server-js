@@ -5,8 +5,7 @@ A Node.js-based anonymous HTTP/HTTPS proxy server that provides secure and flexi
 
 - Supports both HTTP and HTTPS traffic
 - No traffic decryption 
-- Anonymous proxy functionality
-- IP-based access control through configurable whitelist
+- Proxy functionality with user auth
 - Easy configuration via environment variables
 - Lightweight and fast
 
@@ -32,17 +31,11 @@ A Node.js-based anonymous HTTP/HTTPS proxy server that provides secure and flexi
 Create a `.env` file in the root directory with the following variables. Choose proxy server port and allowed IPs to access proxy:
 
 ```env
-PORT=33000
-ALLOWED_IPS=52.167.144.238,52.167.144.*,192.168.1.*,10.0.0.0/24
+PORT=3300
+TIMEOUT=90000
+AUTH_USER=ai-user
+AUTH_PASS=ai-pass
 ```
-
-### Configuration Options
-
-- `PORT`: The port number on which the proxy server will listen (default: 33000)
-- `ALLOWED_IPS`: Comma-separated list of IP addresses or IP ranges that are allowed to use the proxy. Supports:
-  - Individual IPs: `192.168.1.100`
-  - IP wildcards: `192.168.1.*`
-  - CIDR notation: `10.0.0.0/24`
 
 ## Usage
 
@@ -52,7 +45,7 @@ Start the proxy server:
 node proxy.js
 ```
 
-The proxy server will start on the configured port and only accept connections from the specified allowed IP addresses.
+The proxy server will start on the configured port and only accept connections from the specified user.
 
 ## Production Mode with PM2
 For production deployment, use PM2 to manage the proxy server:
