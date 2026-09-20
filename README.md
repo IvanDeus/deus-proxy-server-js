@@ -1,5 +1,5 @@
 # deus proxy server
-A Node.js-based anonymous HTTP/HTTPS proxy server that provides secure and flexible proxy capabilities with IP-based access control.
+A Node.js-based HTTP/HTTPS proxy server that provides secure and flexible proxy capabilities with user:password access control.
 
 ## Features
 
