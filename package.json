@@ -11,6 +11,6 @@
     "dotenv": "^17.2.3"
   },
   "keywords": ["proxy", "http", "https"],
-  "author": "",
-  "license": "ISC"
+  "author": "Ivan Deus",
+  "license": "MIT"
 }
