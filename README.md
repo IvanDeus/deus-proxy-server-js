@@ -28,7 +28,7 @@ A Node.js-based HTTP/HTTPS proxy server that provides secure and flexible proxy 
 
 ## Configuration
 
-Create a `.env` file in the root directory with the following variables. Choose proxy server port and allowed IPs to access proxy:
+Create a `.env` file in the root directory with the following variables. Choose proxy server port and allowed user to access proxy:
 
 ```env
 PORT=3300
