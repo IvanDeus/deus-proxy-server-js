@@ -1,7 +1,7 @@
 {
   "name": "proxyjs",
   "version": "1.0.0",
-  "description": "Anonymous HTTP/HTTPS proxy server with ACL",
+  "description": "HTTP/HTTPS proxy server",
   "main": "proxy.js",
   "scripts": {
     "start": "node proxy.js",
@@ -10,7 +10,7 @@
   "dependencies": {
     "dotenv": "^17.2.3"
   },
-  "keywords": ["proxy", "http", "https", "anonymous"],
+  "keywords": ["proxy", "http", "https"],
   "author": "",
   "license": "ISC"
 }
