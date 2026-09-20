@@ -84,4 +84,4 @@ pm2 startup
 pm2 monit
 ```
 
-2025 [ ivan deus ]
+2026 [ ivan deus ]
