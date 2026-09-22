@@ -1,6 +1,7 @@
 # ignore config file for security
 __app.py
 __pycache__/
+.qoder/
 node_modules/
 package-lock.json
 cert.cer
