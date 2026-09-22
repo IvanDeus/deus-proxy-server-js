@@ -139,6 +139,15 @@ proxy.on('request', (clientReq, clientRes) => {
 // ---------- HTTPS CONNECT ----------
 proxy.on('connect', (clientReq, clientSocket, head) => {
   const clientIp = clientSocket.remoteAddress || 'unknown';
+  let serverSocket = null;
+
+  // Node hands CONNECT sockets over with no error listener of its own, so a
+  // client that RSTs (e.g. after a 407) would crash the process uncaught.
+  clientSocket.on('error', (err) => {
+    console.error(`[${clientIp}] Client socket error:`, err.code);
+    if (serverSocket) serverSocket.destroy();
+    clientSocket.destroy();
+  });
 
   if (!checkAuth(clientReq)) {
     console.log(`[${clientIp}] Auth failed for CONNECT request`);
@@ -150,7 +159,7 @@ proxy.on('connect', (clientReq, clientSocket, head) => {
   const [hostname, port] = clientReq.url.split(':');
   const serverPort = parseInt(port) || 443;
 
-  const serverSocket = net.connect({
+  serverSocket = net.connect({
     host: hostname,
     port: serverPort,
     family: 4
@@ -192,11 +201,6 @@ proxy.on('connect', (clientReq, clientSocket, head) => {
     } else {
       clientSocket.end('HTTP/1.1 500 Connection Failed\r\n\r\n');
     }
-  });
-
-  clientSocket.on('error', (err) => {
-    console.error(`[${clientIp}] Client socket error:`, err.code);
-    serverSocket.end();
   });
 
   serverSocket.setTimeout(TIMEOUT, () => {
