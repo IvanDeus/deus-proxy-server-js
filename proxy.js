@@ -1,7 +1,6 @@
 // proxy.js
-// Load environment variables from .env file
-require('dotenv').config();
-
+require('dotenv').config();  // Load environment variables from .env file 
+require('./logger'); // stamps every console call using LOG_TZ
 const http = require('http');
 const https = require('https');
 const url = require('url');
