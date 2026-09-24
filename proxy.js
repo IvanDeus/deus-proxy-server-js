@@ -10,7 +10,7 @@ const dns = require('dns');
 // Load variables from .env with fallback defaults using nullish coalescing (??)
 const PORT = parseInt(process.env.PORT ?? '33000', 10);
 const TIMEOUT = parseInt(process.env.TIMEOUT ?? '90000', 10);
-const AUTH_USER = process.env.AUTH_USER ?? 'ai-user-clipper';
+const AUTH_USER = process.env.AUTH_USER ?? 'ai-user-x';
 const AUTH_PASS = process.env.AUTH_PASS ?? '_iornhf7784hdhdbbbsssidddjooo';
 
 // Prefer IPv4, fall back to IPv6
