@@ -1,11 +1,48 @@
 // proxy.js
-require('dotenv').config();  // Load environment variables from .env file 
-require('./logger'); // stamps every console call using LOG_TZ
 const http = require('http');
 const https = require('https');
 const url = require('url');
 const net = require('net');
 const dns = require('dns');
+const fs = require('fs');
+const path = require('path');
+
+// Load .env if present; a missing file or a missing dotenv must not abort startup.
+const envWarnings = [];
+
+function loadEnvFile() {
+  const file = path.join(__dirname, '.env');
+  if (!fs.existsSync(file)) {
+    envWarnings.push(`no .env file at ${file}, running with built-in defaults`);
+    return;
+  }
+
+  let dotenv = null;
+  try {
+    dotenv = require('dotenv');
+  } catch {
+    envWarnings.push('dotenv is not installed, parsing .env directly');
+  }
+  if (dotenv) {
+    dotenv.config({ path: file });
+    return;
+  }
+
+  for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!match) continue;
+    const [, name, rawValue] = match;
+    if (process.env[name] === undefined) {
+      process.env[name] = rawValue.replace(/^(['"])(.*)\1$/, '$2');
+    }
+  }
+}
+
+loadEnvFile();
+
+require('./logger'); // stamps every console call using LOG_TZ
+
+envWarnings.forEach((warning) => console.warn(`[env] ${warning}`));
 
 // Load variables from .env with fallback defaults using nullish coalescing (??)
 const PORT = parseInt(process.env.PORT ?? '33000', 10);
