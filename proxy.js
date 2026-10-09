@@ -88,6 +88,11 @@ function anonymizeHeaders(headers) {
 
 const proxy = http.createServer();
 
+// CONNECT tunnels, tracked so shutdown can tear them down: once a socket is
+// handed over, Node drops it from server._sockets and closeAllConnections()
+// can no longer see it.
+const tunnels = new Set();
+
 // ---------- HTTP requests ----------
 proxy.on('request', (clientReq, clientRes) => {
   const clientIp = clientReq.socket.remoteAddress || 'unknown';
@@ -188,7 +193,11 @@ proxy.on('connect', (clientReq, clientSocket, head) => {
   const [hostname, port] = clientReq.url.split(':');
   const serverPort = parseInt(port) || 443;
 
-  serverSocket = net.connect({
+  const tunnel = { clientSocket, serverSocket: null };
+  tunnels.add(tunnel);
+  clientSocket.on('close', () => tunnels.delete(tunnel));
+
+  serverSocket = tunnel.serverSocket = net.connect({
     host: hostname,
     port: serverPort,
     family: 4
@@ -206,7 +215,7 @@ proxy.on('connect', (clientReq, clientSocket, head) => {
     if (err.code === 'ENOTFOUND' || err.code === 'EAI_FAIL') {
       console.log(`[${clientIp}] Retrying ${hostname} without IP family restriction...`);
 
-      const fallbackSocket = net.connect({
+      const fallbackSocket = tunnel.serverSocket = net.connect({
         host: hostname,
         port: serverPort
       }, () => {
@@ -252,10 +261,32 @@ proxy.listen(PORT, () => {
   }
 });
 
-process.on('SIGINT', () => {
-  console.log('\nShutting down proxy server...');
+let shuttingDown = false;
+
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n${signal} received, shutting down proxy server...`);
+
+  // Last resort: never let a stubborn socket keep the process alive.
+  setTimeout(() => {
+    console.error('Forced exit: connections still open after 2s');
+    process.exit(1);
+  }, 2000);
+
   proxy.close(() => {
     console.log('Proxy server closed');
     process.exit(0);
   });
-});
+
+  proxy.closeAllConnections();
+
+  for (const tunnel of tunnels) {
+    tunnel.clientSocket.destroy();
+    if (tunnel.serverSocket) tunnel.serverSocket.destroy();
+  }
+  tunnels.clear();
+}
+
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));
