@@ -13,10 +13,18 @@ const TIMEOUT = parseInt(process.env.TIMEOUT ?? '90000', 10);
 const AUTH_USER = process.env.AUTH_USER ?? 'ai-user-x';
 const AUTH_PASS = process.env.AUTH_PASS ?? '_iornhf7784hdhdbbbsssidddjooo';
 
+// Check for anonymous mode flag
+const IS_ANON = process.argv.includes('--anon');
+
 // Prefer IPv4, fall back to IPv6
 dns.setDefaultResultOrder('ipv4first');
 
 function checkAuth(req) {
+  // Bypass authentication completely in anonymous mode
+  if (IS_ANON) {
+    return true;
+  }
+
   const authHeader = req.headers['proxy-authorization'];
   if (!authHeader || !authHeader.startsWith('Basic ')) {
     return false;
@@ -63,6 +71,21 @@ function removeHopByHopHeaders(headers) {
   hopByHop.forEach(h => delete headers[h]);
 }
 
+// Strip headers that leak client identity to the destination server
+function anonymizeHeaders(headers) {
+  const identifyingHeaders = [
+    'x-forwarded-for',
+    'x-real-ip',
+    'via',
+    'forwarded',
+    'x-forwarded-host',
+    'x-forwarded-proto',
+    'true-client-ip',
+    'cf-connecting-ip'
+  ];
+  identifyingHeaders.forEach(h => delete headers[h]);
+}
+
 const proxy = http.createServer();
 
 // ---------- HTTP requests ----------
@@ -87,10 +110,17 @@ proxy.on('request', (clientReq, clientRes) => {
   };
 
   options.headers.host = parsedUrl.host;
+  
+  // Always remove proxy auth so it doesn't leak to the destination
+  delete options.headers['proxy-authorization'];
   delete options.headers['proxy-connection'];
   delete options.headers['connection'];
   delete options.headers['keep-alive'];
-  delete options.headers['proxy-authorization']; // never forward auth
+
+  // If running in anonymous mode, strip all client-identifying headers
+  if (IS_ANON) {
+    anonymizeHeaders(options.headers);
+  }
 
   const proxyReq = http.request(options, (proxyRes) => {
     removeHopByHopHeaders(proxyRes.headers);
@@ -214,8 +244,12 @@ proxy.on('error', (err) => {
 });
 
 proxy.listen(PORT, () => {
-  console.log(`Authenticated HTTP/HTTPS proxy running on port ${PORT}`);
+  const mode = IS_ANON ? 'ANONYMOUS (No Auth, Headers Stripped)' : 'Authenticated';
+  console.log(`${mode} HTTP/HTTPS proxy running on port ${PORT}`);
   console.log('IPv4 preferred with IPv6 fallback');
+  if (IS_ANON) {
+    console.warn('⚠️  WARNING: Running as an open anonymous proxy. Ensure this is intended and properly firewalled.');
+  }
 });
 
 process.on('SIGINT', () => {
