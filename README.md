@@ -1,11 +1,12 @@
 # deus proxy server
-A Node.js-based HTTP/HTTPS proxy server that provides secure and flexible proxy capabilities with user:password access control.
+A Node.js-based HTTP/HTTPS proxy server that provides secure and flexible proxy capabilities, supporting both authenticated (user:password) and completely anonymous modes.
 
 ## Features
 
 - Supports both HTTP and HTTPS traffic
-- No traffic decryption
-- Proxy functionality with user auth
+- No traffic decryption (true tunnel for HTTPS)
+- Flexible access control: User:Password authentication OR completely anonymous mode
+- **Anonymous Mode (`--anon`)**: Bypasses auth and strips client-identifying headers (e.g., `X-Forwarded-For`, `Via`, `X-Real-IP`) to prevent destination servers from tracing the original client
 - Every log line stamped in the timezone you choose, no dependencies
 - Easy configuration via environment variables
 - Lightweight and fast
@@ -29,10 +30,10 @@ A Node.js-based HTTP/HTTPS proxy server that provides secure and flexible proxy 
 
 ## Configuration
 
-Create a `.env` file in the root directory with the following variables. Choose proxy server port and allowed user to access proxy:
+Create a `.env` file in the root directory with the following variables. Choose the proxy server port and the allowed user to access the proxy:
 
 ```env
-PORT=3300
+PORT=33000
 TIMEOUT=90000
 AUTH_USER=ai-user
 AUTH_PASS=ai-pass
@@ -45,27 +46,35 @@ LOG_TZ=Europe/Berlin
 | ----------- | ----------------- | --------------------------------------------- |
 | `PORT`      | `33000`           | Port the proxy listens on                     |
 | `TIMEOUT`   | `90000`           | Per request/socket idle timeout in ms         |
-| `AUTH_USER` | `ai-user-x` | Basic auth user name                          |
-| `AUTH_PASS` | built-in fallback | Basic auth password — always set your own     |
+| `AUTH_USER` | `ai-user-x`       | Basic auth user name *(ignored in `--anon` mode)* |
+| `AUTH_PASS` | built-in fallback | Basic auth password — always set your own *(ignored in `--anon` mode)* |
 | `LOG_TZ`    | `UTC`             | IANA timezone for log timestamps              |
+
+> **Note:** When running with the `--anon` flag, `AUTH_USER` and `AUTH_PASS` are completely ignored, and the proxy acts as an open, anonymous relay.
 
 ## Usage
 
-Start the proxy server:
+Start the proxy server in your desired mode:
 
 ```bash
+# Standard authenticated mode (requires user:pass)
 node proxy.js
+
+# Anonymous mode (ignores credentials, strips identifying headers)
+node proxy.js --anon
 ```
 
-The proxy server will start on the configured port and only accept connections from the specified user.
+The proxy server will start on the configured port. In anonymous mode, a warning will be logged to remind you to ensure the server is properly firewalled if exposed to the public internet.
 
 ## Logging
 
-Every console line is prefixed with a timestamp in the zone you chose. Actual output
-with `LOG_TZ=Asia/Tokyo`, while the host clock read `04:49 UTC`:
+Every console line is prefixed with a timestamp in the zone you chose. 
 
-```
-[2026-09-24 13:49:18] Authenticated HTTP/HTTPS proxy running on port 34125
+Example output with `LOG_TZ=Asia/Tokyo`, while the host clock read `04:49 UTC`:
+
+**Authenticated Mode:**
+```text
+[2026-09-24 13:49:18] Authenticated HTTP/HTTPS proxy running on port 33000
 [2026-09-24 13:49:18] IPv4 preferred with IPv6 fallback
 [2026-09-24 13:49:20] [::ffff:127.0.0.1] Proxying HTTP request: GET http://example.com/
 [2026-09-24 13:49:20] [::ffff:127.0.0.1] Auth failed for HTTP request
@@ -73,12 +82,23 @@ with `LOG_TZ=Asia/Tokyo`, while the host clock read `04:49 UTC`:
 [2026-09-24 13:49:20] [::ffff:127.0.0.1] Successfully connected to example.com:443
 ```
 
-## Production Mode with PM2
-For production deployment, use PM2 to manage the proxy server:
-
+**Anonymous Mode (`--anon`):**
+```text
+[2026-09-24 13:49:18] ANONYMOUS (No Auth, Headers Stripped) HTTP/HTTPS proxy running on port 33000
+[2026-09-24 13:49:18] IPv4 preferred with IPv6 fallback
+[2026-09-24 13:49:18] ⚠️  WARNING: Running as an open anonymous proxy. Ensure this is intended and properly firewalled.
+[2026-09-24 13:49:20] [::ffff:127.0.0.1] Proxying HTTP request: GET http://example.com/
 ```
-# Start the proxy server with PM2
+
+## Production Mode with PM2
+For production deployment, use PM2 to manage the proxy server. 
+
+```bash
+# Start the proxy server with PM2 (Authenticated)
 pm2 start proxy.js --name "deus-proxy"
+
+# Start the proxy server with PM2 (Anonymous Mode)
+pm2 start proxy.js --name "deus-proxy-anon" -- --anon
 
 # View process status
 pm2 status
@@ -95,8 +115,9 @@ pm2 restart deus-proxy
 # Delete the proxy server from PM2
 pm2 delete deus-proxy
 ```
+
 ## PM2 Process Management
-```
+```bash
 # Save the current PM2 configuration
 pm2 save
 
