@@ -123,6 +123,32 @@ function anonymizeHeaders(headers) {
   identifyingHeaders.forEach(h => delete headers[h]);
 }
 
+function formatBytes(bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toFixed(unit ? 2 : 0)} ${units[unit]}`;
+}
+
+// Count bytes flowing through a stream and log the total once, whether the body
+// finishes or the connection dies partway through.
+function logTransfer(stream, label) {
+  let bytes = 0;
+  let reported = false;
+  const report = () => {
+    if (reported) return;
+    reported = true;
+    console.log(`${label} done: ${formatBytes(bytes)} downloaded`);
+  };
+  stream.on('data', (chunk) => { bytes += chunk.length; });
+  stream.on('end', report);
+  stream.on('close', report);
+}
+
 const proxy = http.createServer();
 
 // CONNECT tunnels, tracked so shutdown can tear them down: once a socket is
@@ -167,6 +193,7 @@ proxy.on('request', (clientReq, clientRes) => {
   const proxyReq = http.request(options, (proxyRes) => {
     removeHopByHopHeaders(proxyRes.headers);
     clientRes.writeHead(proxyRes.statusCode, proxyRes.headers);
+    logTransfer(proxyRes, `[${clientIp}] ${clientReq.method} ${clientReq.url}`);
     proxyRes.pipe(clientRes);
   });
 
@@ -181,6 +208,7 @@ proxy.on('request', (clientReq, clientRes) => {
       const fallbackReq = http.request(fallbackOptions, (fallbackRes) => {
         removeHopByHopHeaders(fallbackRes.headers);
         clientRes.writeHead(fallbackRes.statusCode, fallbackRes.headers);
+        logTransfer(fallbackRes, `[${clientIp}] ${clientReq.method} ${clientReq.url}`);
         fallbackRes.pipe(clientRes);
       });
 
@@ -242,6 +270,7 @@ proxy.on('connect', (clientReq, clientSocket, head) => {
     console.log(`[${clientIp}] Successfully connected to ${hostname}:${serverPort}`);
     clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
     serverSocket.write(head);
+    logTransfer(serverSocket, `[${clientIp}] CONNECT ${clientReq.url}`);
     serverSocket.pipe(clientSocket);
     clientSocket.pipe(serverSocket);
   });
@@ -259,6 +288,7 @@ proxy.on('connect', (clientReq, clientSocket, head) => {
         console.log(`[${clientIp}] Fallback connection successful to ${hostname}`);
         clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
         fallbackSocket.write(head);
+        logTransfer(fallbackSocket, `[${clientIp}] CONNECT ${clientReq.url}`);
         fallbackSocket.pipe(clientSocket);
         clientSocket.pipe(fallbackSocket);
       });

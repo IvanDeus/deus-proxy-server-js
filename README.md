@@ -8,6 +8,7 @@ A Node.js-based HTTP/HTTPS proxy server that provides secure and flexible proxy 
 - Flexible access control: User:Password authentication OR completely anonymous mode
 - **Anonymous Mode (`--anon`)**: Bypasses auth and strips client-identifying headers (e.g., `X-Forwarded-For`, `Via`, `X-Real-IP`) to prevent destination servers from tracing the original client
 - Every log line stamped in the timezone you choose, no dependencies
+- Per-request download size logged (bytes, KB, MB…), still no extra dependencies
 - Easy configuration via environment variables
 - Lightweight and fast
 
@@ -80,7 +81,14 @@ Example output with `LOG_TZ=Asia/Tokyo`, while the host clock read `04:49 UTC`:
 [2026-09-24 13:49:20] [::ffff:127.0.0.1] Auth failed for HTTP request
 [2026-09-24 13:49:20] [::ffff:127.0.0.1] Proxying HTTPS request: CONNECT example.com:443
 [2026-09-24 13:49:20] [::ffff:127.0.0.1] Successfully connected to example.com:443
+[2026-10-09 06:11:41] [::ffff:127.0.0.1] GET http://example.com/ done: 195.31 KB downloaded
+[2026-10-09 06:11:41] [::ffff:127.0.0.1] CONNECT example.com:443 done: 2.86 MB downloaded
 ```
+
+Each finished request logs how much came down the wire. Bytes are counted on the
+response stream, so an aborted transfer still reports what was actually pushed.
+For HTTPS the proxy cannot see inside TLS, so the tunnel numbers include the
+handshake and record overhead — use them for traffic volume, not page weight.
 
 **Anonymous Mode (`--anon`):**
 ```text
